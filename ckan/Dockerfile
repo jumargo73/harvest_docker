@@ -29,26 +29,36 @@ RUN python3 -m venv /srv/app/
 
 WORKDIR /srv/app/src
 
+RUN chown -R ckan /srv/app
+
 
 # Clonar extensiones
 #RUN git clone https://github.com/ckan/ckan.git
 RUN git clone https://github.com/ckan/ckanext-harvest.git
+RUN cp -r ckanext-harvest/ckanext/harvest /srv/app/src/ckan/ckanext/harvest
+
+RUN git clone https://github.com/ckan/ckanext-dcat.git
+RUN cp -r ckanext-dcat/ckanext/dcat /srv/app/src/ckan/ckanext/dcat
 #RUN git clone https://github.com/ckan/ckanext-envvars.git
 
 # Asegurar setuptools en el virtualenv de CKAN (sin recrearlo)
-RUN /srv/app/bin/pip install --upgrade pip setuptools==65.5.1
+RUN /srv/app/bin/pip uninstall -y rdflib rdflib-jsonld
+RUN /srv/app/bin/pip install --upgrade pip setuptools==65.5.1 rdflib==6.3.2 rdflib-jsonld==0.6.2
+
 
 
 # Instalar requirements de harvest
 RUN /srv/app/bin/pip install -r ckan/requirements.txt
 RUN /srv/app/bin/pip install -r ckanext-harvest/requirements.txt
 RUN /srv/app/bin/pip install -r ckanext-envvars/dev-requirements.txt
+RUN /srv/app/bin/pip install -r ckanext-dcat/requirements.txt
 
 
 # Instalar extensiones en modo editable
 RUN /srv/app/bin/pip install -e ckan
 RUN /srv/app/bin/pip install -e ckanext-harvest
 RUN /srv/app/bin/pip install -e ckanext-envvars
+RUN /srv/app/bin/pip install -e ckanext-dcat
 
 # Permisos
 RUN chown -R ckan /srv/app

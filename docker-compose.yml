@@ -99,8 +99,6 @@ services:
         condition: service_healthy
     volumes:
       - /home/ckan/ckan/lib/default/src/ckan-padre/ckan/ckan.ini:/srv/app/ckan.ini
-      - /home/ckan/ckan/lib/default/src/ckan-padre/ckan/src/ckan/ckan/templates/header.html:/srv/app/src/ckan/ckan/templates/header.html
-      - /home/ckan/ckan/lib/default/src/ckan-padre/ckan/setup/harvest_migrated.py:/srv/app/harvest_migrated.py
     networks:
       - ckan-padre-net
     env_file:
@@ -111,6 +109,48 @@ services:
       timeout: 10s
       retries: 3   
 
+
+  ckan-gather:
+    build:
+      context: .
+      dockerfile: ./ckan/Dockerfile
+    image: harvest:2.11 
+    depends_on:
+      ckan:
+        condition: service_healthy
+    command: ckan -c /srv/app/ckan.ini harvester gather-consumer
+    volumes:
+      - /home/ckan/ckan/lib/default/src/ckan-padre/ckan/ckan.ini:/srv/app/ckan.ini
+    networks:
+      - ckan-padre-net
+    env_file:
+      - .env   
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://ckan:5000/api/3/action/status_show"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  ckan-fetch:
+    build:
+      context: .
+      dockerfile: ./ckan/Dockerfile
+    image: harvest:2.11
+    depends_on:
+      ckan:
+        condition: service_healthy
+    command: ckan -c /srv/app/ckan.ini harvester fetch-consumer
+    volumes:
+      - /home/ckan/ckan/lib/default/src/ckan-padre/ckan/ckan.ini:/srv/app/ckan.ini
+    networks:
+        - ckan-padre-net
+    env_file:
+      - .env   
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://ckan:5000/api/3/action/status_show"]
+      interval: 60s
+      timeout: 10s
+      retries: 3  
   nginx:
     build:
       context: nginx/

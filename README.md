@@ -22,7 +22,7 @@ https://github.com/jumargo73/harvest_docker.git
 
 Se abre el contenedor de la aplicacion
 
-docker exec -u root -it  ckan-hijo-ckan-1 bash
+docker exec -u root -it  ckan-padre-ckan-1 bash
 
 ckan db upgrade ejecuta las migraciones de ckan creacion de las tablas basicas
 python  harvest_migrated.py crea tablas de harvest
@@ -45,3 +45,10 @@ Archivos importantes
 .env variables de entorno
 .docker-compose.yml archivo donde se configura los contenedores de la aplicacion
 dockerfile archivo de configuracion del contenedor.
+
+comandos importantes en harvest
+ckan -c /srv/app/ckan.ini harvester jobs  
+ckan -c /srv/app/ckan.ini harvester sources
+
+
+
