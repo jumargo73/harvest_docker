@@ -1,7 +1,15 @@
 #Repositorio de Alojamiento
- sudo mkdir  -p  /usr/lib/ckan/default/src/
 
- cd /usr/lib/ckan/default/src/
+
+sudo mkdir -p ~/ckan/lib//default/
+sudo chmod 777 ~/ckan/lib/default/
+
+sudo chown `whoami` ~/ckan/lib/default/
+
+cd ~/ckan/lib/default/
+
+
+#se descarga la aplicacion desde el git clone https://github.com/jumargo73/harvest_docker.git
 
  #se descarga la aplicacion desde el git
 https://github.com/jumargo73/harvest_docker.git
