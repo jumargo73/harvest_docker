@@ -2,9 +2,6 @@ networks:
   ckan-padre-net:
     name: ckan-padre-net
     driver: bridge 
-  ckan-shared-net:
-    external: true
-    name: ckan-shared-net 
 
 volumes:
   pg_data:
@@ -67,10 +64,7 @@ services:
     networks:
       ckan-padre-net:
         aliases:
-          - ckan-padre
-      ckan-shared-net:
-        aliases:
-          - ckan-shared-net
+          - ckan-padre      
     build:
       context: .
       dockerfile: ./ckan/Dockerfile
