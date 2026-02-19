@@ -1,9 +1,10 @@
-
-networks:
+networks:  
   ckan-padre-net:
-    driver: bridge
-  ckan-hijo-net:
+    name: ckan-padre-net
+    driver: bridge 
+  ckan-shared-net:
     external: true
+    name: ckan-shared-net 
 
 volumes:
   pg_data:
@@ -15,6 +16,10 @@ volumes:
 services:
 
   db:
+    networks:
+      ckan-padre-net:
+          aliases:
+            - ckan-padre
     build:
       context: postgresql/
     environment:
@@ -30,18 +35,19 @@ services:
     env_file:
       - .env  
     volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - ckan-padre-net
+      - pg_data:/var/lib/postgresql/data    
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_PASSWORD}"]    
 
   solr:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre 
     image: ckan/ckan-solr:2.10-solr9
     volumes:
       - solr_data:/var/solr
-    networks:
-      - ckan-padre-net
+    
     healthcheck:
       test: ["CMD", "curl", "-f", "http://solr:8983/solr"]
       interval: 10s
@@ -49,17 +55,28 @@ services:
       retries: 5  
 
   redis:
-    image: redis:7
     networks:
-      - ckan-padre-net
+      ckan-padre-net:
+          aliases:
+            - ckan-padre
+    image: redis:7    
     healthcheck:
       test: ["CMD", "redis-cli", "-e", "QUIT"]    
 
   ckan:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre
+      ckan-shared-net:
+        aliases:
+          - ckan-shared-net
     build:
       context: .
       dockerfile: ./ckan/Dockerfile
     image: harvest:2.11  
+    ports:
+    - "5001:5000"
     depends_on:
       db:
         condition: service_healthy
@@ -73,11 +90,8 @@ services:
       - ./ckan/setup/harvest_migrated.py:/srv/app/harvest_migrated.py
       - ckan_storage:/var/lib/ckan
       - pip_cache:/root/.cache/pip
-      - site_packages:/usr/lib/python3.10/site-packages
-    networks:
-      - ckan-padre-net
-    expose:
-      - "5000"  
+      - site_packages:/usr/lib/python3.10/site-packages 
+    restart: unless-stopped 
     env_file:
       - .env   
     healthcheck:
@@ -87,22 +101,27 @@ services:
       retries: 3  
 
   worker:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre
     build:
       context: .
       dockerfile: ./ckan/Dockerfile
     image: harvest:2.11    
     command: ckan jobs worker
     depends_on:
+      ckan:
+        condition: service_healthy
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./ckan/ckan.ini:/srv/app/ckan.ini
-    networks:
-      - ckan-padre-net
+      - ./ckan/ckan.ini:/srv/app/ckan.ini    
     env_file:
       - .env   
+    restart: unless-stopped  
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://ckan:5000/api/3/action/status_show"]
       interval: 60s
@@ -111,6 +130,10 @@ services:
 
 
   ckan-gather:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre
     build:
       context: .
       dockerfile: ./ckan/Dockerfile
@@ -118,13 +141,16 @@ services:
     depends_on:
       ckan:
         condition: service_healthy
-    command: ckan -c /srv/app/ckan.ini harvester gather-consumer
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy  
+    command: ckan -c /srv/app/ckan.ini harvester gather-consumer    
     volumes:
-      - ./ckan/ckan.ini:/srv/app/ckan.ini
-    networks:
-      - ckan-padre-net
+      - ./ckan/ckan.ini:/srv/app/ckan.ini    
     env_file:
       - .env   
+    restart: unless-stopped  
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://ckan:5000/api/3/action/status_show"]
       interval: 60s
@@ -132,6 +158,10 @@ services:
       retries: 3
 
   ckan-fetch:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre
     build:
       context: .
       dockerfile: ./ckan/Dockerfile
@@ -139,19 +169,26 @@ services:
     depends_on:
       ckan:
         condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy 
     command: ckan -c /srv/app/ckan.ini harvester fetch-consumer
     volumes:
-      - ./ckan/ckan.ini:/srv/app/ckan.ini
-    networks:
-        - ckan-padre-net
+      - ./ckan/ckan.ini:/srv/app/ckan.ini    
     env_file:
       - .env   
+    restart: unless-stopped  
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://ckan:5000/api/3/action/status_show"]
       interval: 60s
       timeout: 10s
       retries: 3  
   nginx:
+    networks:
+      ckan-padre-net:
+        aliases:
+          - ckan-padre
     build:
       context: nginx/
       dockerfile: Dockerfile
@@ -163,5 +200,4 @@ services:
     depends_on:
       ckan:
         condition: service_healthy
-    networks:
-      - ckan-padre-net
+   
